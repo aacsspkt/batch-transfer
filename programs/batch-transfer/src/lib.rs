@@ -1,4 +1,5 @@
-use anchor_lang::prelude::*;
+use  anchor_lang::solana_program::{program::{invoke, invoke_signed}, system_instruction::transfer};
+use anchor_lang::{prelude::*, solana_program::entrypoint::ProgramResult};
 use anchor_spl::{
     associated_token::AssociatedToken, 
     token::{
@@ -16,6 +17,59 @@ declare_id!("DwZruo6t3BW4DUtALe2i2E6ewA8b5mH1Lk2TWeyV8ymo");
 pub mod batch_transfer {
 
     use super::*;
+
+    pub fn deposit_sol(ctx: Context<DepositSol>, amount: u64) -> Result<()> {
+        let authority= ctx.accounts.authority.to_account_info();
+        let ledger = ctx.accounts.ledger.to_account_info();
+        let system_program = ctx.accounts.system_program.to_account_info();
+
+        let ix = transfer(
+            &authority.key(),
+            &ledger.key(),
+            amount,
+        );
+        invoke(
+            &ix,
+            &[
+                authority.to_account_info(),
+                ledger.to_account_info(),
+                system_program.to_account_info(),
+            ],
+        );
+        
+        Ok(())
+    }
+
+    pub fn sol_transfer(ctx: Context<SolTransfer>, amount: u64) -> Result<()> {
+        let ledger = ctx.accounts.ledger.to_account_info();
+        let system_program = ctx.accounts.system_program.to_account_info();
+        let to = ctx.accounts.to.to_account_info();
+
+        let ix = transfer(
+            &ledger.key(),
+            &to.key(),
+            amount,
+        );
+        
+        let authority_key = ctx.accounts.authority.key();
+        let bump = ctx.bumps
+            .get("ledger")
+            .unwrap_or_else(|| panic!("Bump is missing."))
+            .to_be_bytes();
+        let signers_seeds: &[&[&[u8]]] = &[&[b"BatchTransactionLedger", authority_key.as_ref(), bump.as_ref()]];
+
+        invoke_signed(
+            &ix, 
+            &[
+                ledger.to_account_info(),
+                to.to_account_info(),
+                system_program.to_account_info()
+            ], 
+            signers_seeds
+        );
+
+        Ok(())
+    }
 
     pub fn deposit_token(ctx: Context<DepositToken>, amount: u64) -> Result<()> {
         let token_program = ctx.accounts.token_program.to_account_info();
@@ -70,6 +124,39 @@ pub mod batch_transfer {
 }
 
 #[derive(Accounts)]
+pub struct DepositSol<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+        init_if_needed,
+        payer = authority,
+        seeds = [b"BatchTransactionLedger", authority.key().as_ref()],
+        bump,
+        space = 8 + 32
+    )]
+    pub ledger: Box<Account<'info, BatchTransactionLedger>>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SolTransfer<'info> {
+    pub authority: Signer<'info>,
+    
+    #[account(
+        seeds = [b"Ledger", authority.key().as_ref()],
+        bump,
+    )]
+    pub ledger: Box<Account<'info, BatchTransactionLedger>>,
+
+    /// CHECK: receiver's account
+    pub to: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct DepositToken<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -84,11 +171,11 @@ pub struct DepositToken<'info> {
     #[account(
         init_if_needed,
         payer = authority,
-        seeds = [b"Ledger", authority.key().as_ref()],
+        seeds = [b"BatchTransactionLedger", authority.key().as_ref()],
         bump,
         space = 8 + 32
     )]
-    pub ledger: Box<Account<'info, RegistrationLedger>>,
+    pub ledger: Box<Account<'info, BatchTransactionLedger>>,
     
     #[account(
         init_if_needed,
@@ -108,7 +195,7 @@ pub struct DepositToken<'info> {
 }
 
 #[account]
-pub struct RegistrationLedger {
+pub struct BatchTransactionLedger {
     authority: Pubkey,
 }
 
@@ -122,7 +209,7 @@ pub struct SplTransfer<'info> {
         seeds = [b"Ledger", authority.key().as_ref()],
         bump,
     )]
-    pub ledger: Box<Account<'info, RegistrationLedger>>,
+    pub ledger: Box<Account<'info, BatchTransactionLedger>>,
 
     #[account(
         mut,
@@ -132,7 +219,7 @@ pub struct SplTransfer<'info> {
     pub vault: Box<Account<'info, TokenAccount>>,
     
     /// CHECK: receiver's account
-    pub to_owner: AccountInfo<'info>,
+    pub to_owner: UncheckedAccount<'info>,
 
     #[account(
         init_if_needed,
