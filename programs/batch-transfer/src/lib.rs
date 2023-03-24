@@ -123,6 +123,49 @@ pub mod batch_transfer {
     }
 }
 
+fn create_transfer<'a>(
+    from: AccountInfo<'a>,
+    to: AccountInfo<'a>,
+    system_program: AccountInfo<'a>,
+    amount: u64,
+) -> ProgramResult {
+   
+    anchor_lang::solana_program::program::
+}
+
+#[derive(Accounts)]
+pub struct DepositSol<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+        init_if_needed,
+        payer = authority,
+        seeds = [b"BatchTransactionLedger", authority.key().as_ref()],
+        bump,
+        space = 8 + 32
+    )]
+    pub ledger: Box<Account<'info, BatchTransactionLedger>>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SolTransfer<'info> {
+    pub authority: Signer<'info>,
+    
+    #[account(
+        seeds = [b"Ledger", authority.key().as_ref()],
+        bump,
+    )]
+    pub ledger: Box<Account<'info, BatchTransactionLedger>>,
+
+    /// CHECK: receiver's account
+    pub to: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
 #[derive(Accounts)]
 pub struct DepositSol<'info> {
     #[account(mut)]
