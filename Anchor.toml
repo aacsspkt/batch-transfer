@@ -5,13 +5,13 @@ skip-lint = false
 batch_transfer = "DwZruo6t3BW4DUtALe2i2E6ewA8b5mH1Lk2TWeyV8ymo"
 
 [programs.devnet]
-batch_transfer = "DwZruo6t3BW4DUtALe2i2E6ewA8b5mH1Lk2TWeyV8ymo"
+batch_transfer = "CFNXEYW8WPiSL5KFRBxSVtMrStE8WQjaekQ5vHjf14ph"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id_4.json"
 
 [scripts]

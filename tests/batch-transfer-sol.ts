@@ -29,32 +29,23 @@ describe("batch-transfer", () => {
     provider
   );
 
-  it("deposit token!", async () => {
-    
-    const associatedTokenProgram = anchor.utils.token.ASSOCIATED_PROGRAM_ID;
-    const tokenProgram = anchor.utils.token.TOKEN_PROGRAM_ID;
+  it("deposit sol!", async () => {
+    console.log("token program", anchor.utils.token.ASSOCIATED_PROGRAM_ID.toString(), anchor.utils.token.TOKEN_PROGRAM_ID.toString());
     const systemProgram = anchor.web3.SystemProgram.programId;
 
     const authority = wallet.publicKey;
-    const mint = new anchor.web3.PublicKey("AbLwGR8A1wvsiLWrzzA5eYPoQw51NVMcMMTPvAv5LTJ");
-    const from = anchor.utils.token.associatedAddress({mint, owner: authority})
+    console.log("authority", authority);
     const [ledger] = anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from("BatchTransaction"), authority.toBuffer()], 
       program.programId
       );
-    const vault = anchor.utils.token.associatedAddress({mint, owner: ledger});
-    const amount = new BN("1000").mul(new BN(anchor.web3.LAMPORTS_PER_SOL));
+    const amount = new BN("10").mul(new BN(anchor.web3.LAMPORTS_PER_SOL));
     
-    const tx = await program.methods.depositToken(amount)
+    const tx = await program.methods.depositSol(amount)
     .accounts({
-      associatedTokenProgram,
       authority,
-      from,
       ledger,
-      mint,
-      systemProgram,
-      tokenProgram,
-      vault
+      systemProgram
     }).transaction();
 
 
@@ -63,47 +54,38 @@ describe("batch-transfer", () => {
     tx.recentBlockhash = blockhash;
     tx.lastValidBlockHeight = lastValidBlockHeight;
 
-    const signed = await wallet.signTransaction(tx);
-    const signature = await connection.sendRawTransaction(signed.serialize());
-    await connection.confirmTransaction({blockhash, lastValidBlockHeight, signature});
-    console.log("Your transaction signature", signature);
+    // const signed = await wallet.signTransaction(tx);
+    // const signature = await connection.sendRawTransaction(signed.serialize());
+    // await connection.confirmTransaction({blockhash, lastValidBlockHeight, signature});
+    // console.log("Your transaction signature", signature);
   });
 
 
-  it("spl transfer", async ()=> {
-    const associatedTokenProgram = anchor.utils.token.ASSOCIATED_PROGRAM_ID;
-    const tokenProgram = anchor.utils.token.TOKEN_PROGRAM_ID;
+  it("sol transfer", async ()=> {
     const systemProgram = anchor.web3.SystemProgram.programId;
 
     const authority = wallet.publicKey;
-    const mint = new anchor.web3.PublicKey("AbLwGR8A1wvsiLWrzzA5eYPoQw51NVMcMMTPvAv5LTJ");
     const [ledger] = anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from("BatchTransaction"), authority.toBuffer()], 
       program.programId
       );
-    const vault = anchor.utils.token.associatedAddress({mint, owner: ledger});
-    
-    const toOwner = new anchor.web3.PublicKey("8ctxLVXqJjttevpURSnrX5DDMuSgNDAyVjwHoSfccrTE");
-    const to = anchor.utils.token.associatedAddress({mint, owner: toOwner})
-    const amount = new BN("1").mul(new BN(anchor.web3.LAMPORTS_PER_SOL));
+    console.log("ledger", ledger.toString())
+    const to = new anchor.web3.PublicKey("8ctxLVXqJjttevpURSnrX5DDMuSgNDAyVjwHoSfccrTE");
+    const amount = new BN("1000000")
     
     const ix = await program.methods
-      .splTransfer(amount)
+      .solTransfer(amount)
       .accounts({
-        associatedTokenProgram,
         authority,
         ledger,
-        mint,
         systemProgram,
-        to,
-        tokenProgram,
-        toOwner,
-        vault
+        to
       }).instruction();
 
       const tx = new anchor.web3.Transaction();
       
-      let MAX_IX_COUNT = 28
+      let MAX_IX_COUNT = 42
+
       for (let i = 0; i < MAX_IX_COUNT; i++) {
         tx.add(ix);
       }
